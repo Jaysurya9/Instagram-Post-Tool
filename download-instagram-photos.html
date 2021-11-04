@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <meta charset="utf-8">
+      <title>Instagram Downloader</title>
+      <style>
+         .postURL:focus {
+            
+         border: 2px solid #6f6f6f!important;
+         }
+         .postURL{
+            
+         background: #fafafa;
+            
+         border: 2px solid #dce4ec;
+            
+         font-size: 16px;
+            
+         line-height: 18px;
+            
+         margin-top: 10px;
+            
+         overflow: hidden;
+            
+         outline: none;
+            
+         padding: 14px 27px;
+            
+         text-overflow: ellipsis;
+            
+         width: calc(100% - 60px);
+            
+         display: block;
+            
+         border-width: 2px;
+            
+         -webkit-transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+            
+         transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+            
+         box-shadow: none;
+            
+         color: #2c3e50;
+         }
+         .instasearch{
+            
+         background-color: #2c3e50;
+            
+         height: 50px;
+            
+         font-size: 20px;
+            
+         border: none;
+            
+         margin: 10px auto;
+            
+         width: 100%;
+            
+         color: #eee;
+            
+         border-radius: 5px;
+         cursor: pointer;
+         }
+         .card{
+         background-color: #fafafa;
+         border: 1px solid rgba(var(--b6a,219,219,219),1);
+         border-bottom-right-radius: 3px;
+         border-top-right-radius: 3px;
+         max-width: 400px;
+         padding: 6px;
+         margin: 6px auto;
+         }
+         .videoDownload{
+         background-color: #3F51B5;
+         font-size: 18px;
+         color: #eee!important;
+         padding: 6px;
+         text-align: center;
+         }
+      </style>
+   </head>
+   <body>
+      <div>
+         <img border="0" data-original-height="493" data-original-width="1600"  src="https://4.bp.blogspot.com/-oa2vr0oCDhM/XodPVG-jaSI/AAAAAAAAGBk/a9cBzv8CbIU-Sd1NzQawbcsH-zBAMWcyACLcBGAsYHQ/s920/512x512bb.jpg" width="100%" />
+         <input id='postURL' class="postURL" placeholder="Paste link here..." type="text" value="" />
+         <div id="msgBox" style='padding: 4px; color: #f44336eb;'></div>
+         <button class="instasearch" onclick="submit()">DOWNLOAD</button>
+      </div>
+         
+      <section>
+         <div id="mediaType" style='padding: 4px;font-size: 16px; color: #E91E63;'></div>
+              
+         <div id="result"></div>
+              
+         <p> Copy image or video link from Instagram and put it on the field given on the top. </p>
+             
+      </section>
+      <script>
+         function submit()
+         {
+         
+         	var msgBox = document.getElementById("msgBox");
+         	var result = document.getElementById("result");
+         	var url = document.getElementById("postURL").value;
+         	var validateURL ='none';
+         
+         	var expression = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+         	var regex = new RegExp(expression);
+         
+         	if (url) {
+         		if (url.match(regex) ) {
+         			msgBox.innerHTML = "wait...";
+         			var nURL = url.split('?')[0] +'?__a=1';
+         			fetchURL(nURL);
+         		} else {
+         			msgBox.innerHTML = "Enter a valid image or video link.";
+         		}
+         	} else {
+         		msgBox.innerHTML = "Enter Instagram image or video link.";
+         	}
+         }
+         
+         
+         
+         
+         
+         function fetchURL(url)
+         {
+         	var xmlhttp = new XMLHttpRequest();
+         
+         	xmlhttp.onreadystatechange = function() {
+         		if (this.readyState == 4 && this.status == 200) {
+         			var getJSON= JSON.parse(this.responseText);
+         			if (getJSON.graphql.shortcode_media) {
+         				getMedia(getJSON);
+         			}
+         		}
+         	};
+         	xmlhttp.open("GET", url, true);
+         	xmlhttp.send();
+         }
+         
+         
+         function getMedia(getJSON)
+         {
+         	document.getElementById("result").innerHTML = '';
+         
+         
+         	if (getJSON.graphql.shortcode_media.__typename == "GraphSidecar") {
+         		document.getElementById("mediaType").innerHTML = "Instagram Album";
+         		var albumJSON = getJSON.graphql.shortcode_media.edge_sidecar_to_children.edges;
+         		for (var i = 0; i < albumJSON.length; i++) {
+         			if (albumJSON[i].node.__typename == "GraphImage") {
+         				var albumLink = albumJSON[i].node.display_url;
+         				updateResult("Image", albumLink);
+         
+         			} else if (albumJSON[i].node.__typename == "GraphVideo") {
+         				var albumLink = albumJSON[i].node.video_url;
+         				updateResult("Video", albumLink);
+         			}
+         		}
+         
+         	} else if (getJSON.graphql.shortcode_media.__typename == "GraphImage") {
+         		var imageLink = getJSON.graphql.shortcode_media.display_url;
+         		document.getElementById("mediaType").innerHTML = "Instagram Image";
+         		updateResult("Image", imageLink);
+         
+         	} else if (getJSON.graphql.shortcode_media.__typename == "GraphVideo") {
+         		document.getElementById("mediaType").innerHTML = "Instagram Video";
+         		var videoLink = getJSON.graphql.shortcode_media.video_url;
+         		updateResult("Video", videoLink);
+         
+         	} else {
+         		document.getElementById("mediaType").innerHTML = "Error: Not found Video / Image / Album.";
+         	}
+         
+         	loadCaption(getJSON.graphql.shortcode_media.edge_media_to_caption.edges);
+         }
+         
+         
+         
+         
+         
+         function updateResult(type, url)
+         {
+         
+         	if (type=='Video') {
+         		var elem = '<div class="card"><video style="width: 100%; height: auto;" controls> <source src="'+ url +'" type="video/mp4"> Your browser does not support HTML5 video.</video><a class="videoDownload" rel="nofollow" href="'+ url +'&amp;dl=1" >Download</a></div>';
+         
+         	} else if (type=='Image') {
+         		var elem = '<div class="card"><img src="'+ url +'" style="width: 100%; height: auto;"> <a class="videoDownload" rel="nofollow" href="'+ url +'&amp;dl=1" >Download</a></div>';
+         	} else {
+         		var elem = '<div class="card">Sorry, Something went wrong.</div>';
+         	}
+         
+         	document.getElementById("result").innerHTML = document.getElementById("result").innerHTML + elem ;
+         	document.getElementById("msgBox").innerHTML = '';
+         	document.getElementById("postURL").value= '';
+         }
+         
+         
+         
+         function loadCaption(captionJSON)
+         {
+         	for (var i = 0; i < captionJSON.length; i++) {
+         		var captionText = captionJSON[i].node.text;
+         		document.getElementById("result").innerHTML = document.getElementById("result").innerHTML + '<div class="card">'+ captionText +'</div>'; ;
+         	}
+         }
+         
+         
+      </script>
+   </body>
+</html>
